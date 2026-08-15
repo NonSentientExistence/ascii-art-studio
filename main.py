@@ -1,11 +1,13 @@
 from PIL import Image, UnidentifiedImageError, ImageEnhance
-
+import json
 
 class DisplayImage:
     """
     Represents a single image loaded into ASCII art and it's display settings
     size, brightness and contrast used when rendering as ASCII
     """
+    # Corrects aspect of image, due to characters being 1:2 ratio
+    ASPECT_CORRECTION = 0.5
 
     def __init__(self, filename):
         """
@@ -25,8 +27,8 @@ class DisplayImage:
         self.filename = filename
         self.img = img
         self.org_size = self.img.size
-        self.brightness = 1
-        self.contrast = 1
+        self.brightness = 1.0
+        self.contrast = 1.0
         self.target_width = 50
         self.target_height = self._height_for_width(self.target_width)
 
@@ -202,9 +204,21 @@ class Session:
         if session_name is None:
             return "No save file name given for session save file"
         
-        session_file = open(session_name, "w")
-        with open(session_file, "w") as f:
-            f.write(self.info())
+        data = {
+            "current": self.current,
+            "images": {
+                key: {
+                    "filename": image.filename,
+                    "target_width": image.target_width,
+                    "target_height": image.target_height,
+                    "brightness": image.brightness,
+                    "contrast": image.contrast,
+                }
+                for key, image in self.images.items()
+            },
+        }
+        with open(session_name, "w") as f:
+            json.dump(data, f)
 
     def load_session(self, session_name):
         """
@@ -214,7 +228,8 @@ class Session:
             str: session name. The name of the session file to be loaded
         """
         try: 
-            session_file = open(session_file)
+            with open(session_name) as f:
+                data = json.load(f)
         except FileNotFoundError:
             print("The file does not exist.")
             return
@@ -222,7 +237,14 @@ class Session:
             print("Cannot open the session file.")
             return
         
-        
+        for key, settings in data["images"].items():
+            self.load_image(settings["filename"], alias=key if key != settings["filename"] else None)
+            image = self.images[key]
+            image.set_width(settings["target_width"])
+            image.set_brightness(settings["brightness"])
+            image.set_contrast(settings["contrast"])
+
+        self.current = data["current"]
 
 def run():
     """Starts the ASCII Art Studio command loop."""
@@ -248,22 +270,19 @@ def handle_command(session, command):
     action = parts[0]
 
     if action == "load":
+        filename = parts[2]
         if parts[1] == "image":
             if len(parts) <= 3:
-                filename = parts[2]
-                Session.load_image(filename)
+                session.load_image(filename)
             else:
                 alias = parts[4]
-                Session.load_image(filename, alias)
+                session.load_image(filename, alias)
         if parts[1] == "session":
-
-
-
+            session.load_session(filename)
 
 if __name__ == '__main__':
-    if __name__ == '__main__':
-        d = DisplayImage('peng.png')
-        print(d.filename, d.org_size, d.brightness, d.contrast)
+    d = DisplayImage('peng.png')
+    print(d.filename, d.org_size, d.brightness, d.contrast)
 
     try:
         bad = DisplayImage('finns_inte.jpg')
