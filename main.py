@@ -191,6 +191,39 @@ class Session:
         lines.append(f"Current image: {self.current}")
         return "\n".join(lines)
 
+    def save_session(self, session_name):
+        """
+        Saves the current session to a text file. Adds no file extension.
+        Overwrites existing file.
+
+        Parameters:
+            str session_name: The name for the file to be saved as.
+        """
+        if session_name is None:
+            return "No save file name given for session save file"
+        
+        session_file = open(session_name, "w")
+        with open(session_file, "w") as f:
+            f.write(self.info())
+
+    def load_session(self, session_name):
+        """
+        Loads provided session_name file and reads in as current session
+
+        Parameters:
+            str: session name. The name of the session file to be loaded
+        """
+        try: 
+            session_file = open(session_file)
+        except FileNotFoundError:
+            print("The file does not exist.")
+            return
+        except OSError:
+            print("Cannot open the session file.")
+            return
+        
+        
+
 def run():
     """Starts the ASCII Art Studio command loop."""
     session = Session()
@@ -216,8 +249,16 @@ def handle_command(session, command):
 
     if action == "load":
         if parts[1] == "image":
-            if len(parts) > 3
-                
+            if len(parts) <= 3:
+                filename = parts[2]
+                Session.load_image(filename)
+            else:
+                alias = parts[4]
+                Session.load_image(filename, alias)
+        if parts[1] == "session":
+
+
+
 
 if __name__ == '__main__':
     if __name__ == '__main__':
