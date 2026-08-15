@@ -47,23 +47,33 @@ class DisplayImage:
     def set_width(self, width):
         """Sets target width: height is recalculated to preserve aspect ratio.
         Not intended to be called outside the class but nothing prevents that"""
-        self.target_width = int(width)
+        try:
+            width = int(width)
+        except ValueError:
+            print("Felaktig typ av värde för bredd")
+            return
+        self.target_width = width
         self.target_height = self._height_for_width(self.target_width)
 
     def set_height(self, height):
         """Sets target height: width is recalculated to preserve aspect ratio."""
+        try:
+            height = int(height)
+        except ValueError:
+                    print("Felaktig typ av värde för höjd")
+                    return
         self.target_height = int(height)
         self.target_width = self._width_for_height(self.target_height)
 
 
-    def render(self, width=50):
+    def render(self):
         """
         Returns a multi line string which represents the image in ASCII art.
         brightness/contrast/size adjustments applied.
 
         Parameters:
             width (int): character width of the output
-            Deafult 50 if no parameter is passed
+            No default passed, the object has default w attribute 50.
 
         Returns:
             str: multi-line ASCII of image
@@ -246,6 +256,23 @@ class Session:
 
         self.current = data["current"]
 
+    def get_image(self, name=None):
+        """
+        Help function to resolves an image reference to a DisplayImage object.
+
+        Parameters:
+            name (str or None): alias or filename used when the image
+                was loaded, or the literal word 'current'. If None,
+                returns the current image.
+
+        Returns:
+            DisplayImage or None: the resolved image, or None if no
+                matching image is loaded/found
+        """
+        if name is None or name == "current":
+            return self.get_current()
+        return self.images.get(name)
+
 def run():
     """Starts the ASCII Art Studio command loop."""
     session = Session()
@@ -274,11 +301,65 @@ def handle_command(session, command):
         if parts[1] == "image":
             if len(parts) <= 3:
                 session.load_image(filename)
+                return True
             else:
                 alias = parts[4]
                 session.load_image(filename, alias)
+                return True
         if parts[1] == "session":
             session.load_session(filename)
+            return True
+
+    elif action == "save":
+        filename = parts[3]
+        session.save_session(filename)
+        return True
+
+    elif action == "info":
+        print(session.info())
+        return True
+
+    elif action == "render":
+        if len(parts) >= 4 and parts[2] == "to":
+            image = session.get_image(parts[1])
+            output_filename = parts[3]
+            if image is None:
+                print(f"No such image: {parts[1]}")
+                return True
+            with open(output_filename, "w") as f:
+                f.write(image.render())
+            return True
+
+        name = parts[1] if len(parts) > 1 else None
+        image = session.get_image(name)
+        if image is None:
+            print("No image loaded")
+            return True
+        print(image.render())
+        return True
+
+    elif action == "set":
+        if len(parts) < 4:
+            return True
+        name, prop, value = parts[1], parts[2], parts[3]
+        image = session.get_image(name)
+        if image is None:
+            print(f"No such image: {name}")
+            return True
+
+        if prop == "width":
+            image.set_width(value)
+        elif prop == "height":
+            image.set_height(value)
+        elif prop == "brightness":
+            image.set_brightness(value)
+        elif prop == "contrast":
+            image.set_contrast(value)
+        else:
+            print(f"Unknown property: {prop}")
+        return True
+
+    return True
 
 if __name__ == '__main__':
     d = DisplayImage('peng.png')
@@ -297,3 +378,5 @@ if __name__ == '__main__':
     print("--- Testar via Session.load_image() ---")
     s = Session()
     s.load_image('text.jpg')
+
+    run()
