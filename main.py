@@ -1,4 +1,4 @@
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, UnidentifiedImageError, ImageEnhance
 
 
 class DisplayImage:
@@ -27,6 +27,26 @@ class DisplayImage:
         self.org_size = self.img.size
         self.brightness = 1
         self.contrast = 1
+        self.target_width = 50
+        self.target_height = self._height_for_width(self.target_width)
+
+    def _height_for_width(self, width):
+        """Computes the height that preserves aspect ratio for a given width."""
+        return int(self.img.height / self.img.width * width * self.ASPECT_CORRECTION)
+
+    def _width_for_height(self, height):
+        """Computes the width that preserves aspect ratio for a given height."""
+        return int(height * self.img.width / (self.img.height * self.ASPECT_CORRECTION))
+
+    def set_width(self, width):
+        """Sets target width; height is recalculated to preserve aspect ratio."""
+        self.target_width = int(width)
+        self.target_height = self._height_for_width(self.target_width)
+
+    def set_height(self, height):
+        """Sets target height; width is recalculated to preserve aspect ratio."""
+        self.target_height = int(height)
+        self.target_width = self._width_for_height(self.target_height)
 
 
     def render(self, width=50):
@@ -42,13 +62,37 @@ class DisplayImage:
             str: multi-line ASCII of image
         """
 
+        width, height = self.target_width, self.target_height
+        resized = self.img.resize((width, height))
+
+        grayscale = resized.convert('L')
+        grayscale = ImageEnhance.Brightness(grayscale).enhance(self.brightness)
+        grayscale = ImageEnhance.Contrast(grayscale).enhance(self.contrast)
+
+        ramp = " .:-=+*#%@"
+        lines = []
+        for y in range(height):
+            row = ""
+            for x in range(width):
+                gray_value = grayscale.getpixel((x, y))
+                index = int(gray_value / 255 * (len(ramp) - 1))
+                row += ramp[index]
+            lines.append(row)
+        return "\n".join(lines)
+
     def set_brightness(self, factor):
         """
         Used to set the brightness for the ASCII art object
 
         Parameters: 
-            int: factor for brightness to be applied
+            float: factor for brightness
         """
+        try:
+            factor = float(factor)
+        except ValueError:
+                print("Felaktig typ av värde för ljusstyrka")
+                return
+        self.brightness = factor
 
     def set_contrast(self, factor):
         
@@ -56,8 +100,14 @@ class DisplayImage:
             Used to set the contrast for the ASCII art object
     
             Parameters: 
-                int: factor for contrast to be applied
+                float: factor for contrast
             """
+            try:
+                factor = float(factor)
+            except ValueError:
+                    print("Felaktig typ av värde för kontrast")
+                    return
+            self.contrast = factor
 
     def info(self):
         """
@@ -65,6 +115,14 @@ class DisplayImage:
             dict: filename, original size, target size, brightness,
             contrast. All info for the ASCII art object
         """
+
+        return {
+        "filename": self.filename,
+        "orgiginal size": self.org_size,
+        "target size": (self.target_width, self.target_height),
+        "brightness": self.brightness,
+        "contrast": self.contrast,
+    }
 
 class Session:
     """
@@ -104,13 +162,29 @@ class Session:
 
     def get_current(self):
         """
-        Returns the DisplayImage currently marked as current.
+        Returns: 
+            DisplayImage object: the DisplayImage marked as current.
+            None if no image has been loaded yet
         """
+        if self.current is None:
+            return None
+        return self.images[self.current]
 
     def info(self):
         """
         Returns a string listing all loaded images for display.
         """
+
+        if not self.images:
+            return "No image loaded"
+
+        lines = ["===== Current session images ====="]
+        for key, image in self.images.items():
+            lines.append(key)
+            for field, value in image.info().items():
+                lines.append(f"    {field}: {value}")
+        lines.append(f"Current image: {self.current}")
+        return "\n".join(lines)
 
 def run():
     """Starts the ASCII Art Studio command loop."""
@@ -130,10 +204,20 @@ def handle_command(session, command):
     """
 
 if __name__ == '__main__':
-    d = DisplayImage('peng.png')
-    print(d.filename, d.org_size, d.brightness, d.contrast)
+    if __name__ == '__main__':
+        d = DisplayImage('peng.png')
+        print(d.filename, d.org_size, d.brightness, d.contrast)
 
     try:
         bad = DisplayImage('finns_inte.jpg')
     except FileNotFoundError:
         print("Fångade FileNotFoundError korrekt, som väntat")
+
+    try:
+        bad2 = DisplayImage('text.jpg')
+    except UnidentifiedImageError:
+        print("Fångade UnidentifiedImageError korrekt, som väntat")
+
+    print("--- Testar via Session.load_image() ---")
+    s = Session()
+    s.load_image('text.jpg')
