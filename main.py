@@ -31,20 +31,25 @@ class DisplayImage:
         self.target_height = self._height_for_width(self.target_width)
 
     def _height_for_width(self, width):
-        """Computes the height that preserves aspect ratio for a given width."""
+        """Internal class help function, calculates 
+        height that preserves aspect ratio for a given width.
+        Not intended to be called outside the class but nothing prevents that"""
         return int(self.img.height / self.img.width * width * self.ASPECT_CORRECTION)
 
     def _width_for_height(self, height):
-        """Computes the width that preserves aspect ratio for a given height."""
+        """Internal class help function, calculates 
+        width that preserves aspect ratio for a given height.
+        Not intended to be called outside the class but nothing prevents that"""
         return int(height * self.img.width / (self.img.height * self.ASPECT_CORRECTION))
 
     def set_width(self, width):
-        """Sets target width; height is recalculated to preserve aspect ratio."""
+        """Sets target width: height is recalculated to preserve aspect ratio.
+        Not intended to be called outside the class but nothing prevents that"""
         self.target_width = int(width)
         self.target_height = self._height_for_width(self.target_width)
 
     def set_height(self, height):
-        """Sets target height; width is recalculated to preserve aspect ratio."""
+        """Sets target height: width is recalculated to preserve aspect ratio."""
         self.target_height = int(height)
         self.target_width = self._width_for_height(self.target_height)
 
@@ -194,6 +199,7 @@ def run():
         command = input("AAS: ")
         if not handle_command(session, command):
             break
+    print("Bye!")
 
 def handle_command(session, command):
     """
@@ -202,6 +208,16 @@ def handle_command(session, command):
     Returns: 
         bool: True unless the command is quit. On quit return False
     """
+    parts = command.split()
+    if not parts:
+        return True
+
+    action = parts[0]
+
+    if action == "load":
+        if parts[1] == "image":
+            if len(parts) > 3
+                
 
 if __name__ == '__main__':
     if __name__ == '__main__':
